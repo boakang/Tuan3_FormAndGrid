@@ -8,6 +8,25 @@ Project demo ASP.NET MVC (.NET Framework) cho màn hình quản lý lô hàng FS
 - SQL Server
 - JavaScript thuần cho giao diện demo
 
+Các thành phần đã cài/enable để chạy project local:
+- .NET Framework 4.8 (target của project)
+- .NET SDK (dùng lệnh `dotnet restore`, `dotnet build`)
+- Local IIS (thay cho IIS Express), gồm các feature:
+   - IIS-WebServerRole
+   - IIS-WebServer
+   - IIS-ManagementConsole
+   - IIS-ISAPIExtensions
+   - IIS-ISAPIFilter
+   - IIS-ASPNET45
+   - IIS-NetFxExtensibility45
+- NuGet packages chính:
+   - Microsoft.AspNet.Mvc 5.2.9
+   - Microsoft.AspNet.Razor 3.2.9
+   - Microsoft.AspNet.WebPages 3.2.9
+   - Microsoft.Web.Infrastructure 1.0.0
+   - EntityFramework 6.4.4
+   - Newtonsoft.Json 13.0.3
+
 ## 2) Cấu trúc thư mục
 
 ```text
