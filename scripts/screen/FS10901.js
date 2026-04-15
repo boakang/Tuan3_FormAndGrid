@@ -1,5 +1,10 @@
 ﻿(function () {
     var deleted = [];
+    var comboData = {
+        cpnyList: [],
+        batchList: [],
+        inventoryList: []
+    };
 
     function id(name) {
         return document.getElementById(name);
@@ -25,11 +30,140 @@
             .join("&");
     }
 
+    function getVietnamTodayDateValue() {
+        var vnMillis = Date.now() + (7 * 60 * 60 * 1000);
+        var vn = new Date(vnMillis);
+        var y = vn.getUTCFullYear();
+        var m = String(vn.getUTCMonth() + 1).padStart(2, "0");
+        var d = String(vn.getUTCDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
+    }
+
+    function applyOrderDayMinConstraint() {
+        var el = id("orderDay");
+        if (!el) {
+            return;
+        }
+        el.min = getVietnamTodayDateValue();
+    }
+
+    function isOrderDayBeforeToday(orderDayValue) {
+        if (!orderDayValue) {
+            return false;
+        }
+        return orderDayValue < getVietnamTodayDateValue();
+    }
+
+    function buildInventoryOptionsHtml(selectedInventoryID) {
+        var html = "<option value=''></option>";
+        comboData.inventoryList.forEach(function (inv) {
+            var selected = (selectedInventoryID && inv.InventoryID === selectedInventoryID) ? " selected" : "";
+            html += "<option value='" + inv.InventoryID + "'" + selected + ">" + inv.InventoryID + " - " + inv.InventoryName + "</option>";
+        });
+        return html;
+    }
+
+    function refreshInventorySelects() {
+        var selects = document.querySelectorAll("#detailBody .inventory");
+        selects.forEach(function (sel) {
+            var currentValue = (sel.value || "").trim();
+            sel.innerHTML = buildInventoryOptionsHtml(currentValue);
+            if (currentValue && !comboData.inventoryList.some(function (x) { return x.InventoryID === currentValue; })) {
+                sel.value = "";
+            }
+        });
+    }
+
+    function loadComboData() {
+        Promise.all([
+            fetch("/FS10901/GetCpnyList").then(function (r) { return r.json(); }),
+            fetch("/FS10901/GetInventoryList").then(function (r) { return r.json(); })
+        ]).then(function (res) {
+            comboData.cpnyList = res[0].data || [];
+            comboData.inventoryList = res[1].data || [];
+            populateBranchSelect();
+            refreshInventorySelects();
+        }).catch(function (err) {
+            console.error("Load combo failed:", err);
+        });
+    }
+
+    function populateBranchSelect() {
+        var sel = id("branchID");
+        if (!sel) return;
+
+        var currentValue = sel.value;
+        sel.innerHTML = "";
+
+        comboData.cpnyList.forEach(function (item) {
+            var opt = document.createElement("option");
+            opt.value = item.CpnyID;
+            opt.text = item.CpnyID + " - " + item.CpnyName;
+            sel.appendChild(opt);
+        });
+
+        if (currentValue && comboData.cpnyList.find(function (c) { return c.CpnyID === currentValue; })) {
+            sel.value = currentValue;
+        } else if (comboData.cpnyList.length > 0) {
+            sel.value = comboData.cpnyList[0].CpnyID;
+        }
+
+        if (sel.value) {
+            populateBatchSelect(sel.value);
+        }
+    }
+
+    function populateBatchSelect(branchID) {
+        var sel = id("batchID");
+        if (!sel) return;
+
+        if (!branchID) {
+            sel.innerHTML = "<option value=\"\">Để trống để tự sinh</option>";
+            return;
+        }
+
+        fetch("/FS10901/GetBatchList?branchID=" + encodeURIComponent(branchID))
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                var batchList = res.data || [];
+                sel.innerHTML = "<option value=\"\">Để trống để tự sinh</option>";
+
+                batchList.forEach(function (item) {
+                    var opt = document.createElement("option");
+                    opt.value = item.BatchID;
+                    opt.text = item.BatchID + " (" + item.OrderDay + ")";
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(function (err) {
+                console.error("Load batch list failed:", err);
+            });
+    }
+
+    function ensureBatchOption(batchID, orderDay) {
+        var sel = id("batchID");
+        if (!sel || !batchID) {
+            return;
+        }
+
+        var exists = Array.prototype.some.call(sel.options, function (opt) {
+            return opt.value === batchID;
+        });
+
+        if (!exists) {
+            var opt = document.createElement("option");
+            opt.value = batchID;
+            opt.text = orderDay ? (batchID + " (" + orderDay + ")") : batchID;
+            sel.appendChild(opt);
+        }
+
+        sel.value = batchID;
+    }
+
     function setTodayIfEmpty() {
         var d = id("orderDay");
         if (d && !d.value) {
-            var now = new Date();
-            d.value = now.toISOString().slice(0, 10);
+            d.value = getVietnamTodayDateValue();
         }
     }
 
@@ -38,15 +172,48 @@
             return "";
         }
 
-        // Accept common .NET/SQL date shapes and normalize before parsing.
-        var normalized = String(raw).trim().replace(" ", "T");
-        var dt = new Date(normalized);
+        var s = String(raw).trim();
 
+        var dateMatch = s.match(/\d{4}-\d{2}-\d{2}/);
+        if (dateMatch) {
+            return dateMatch[0];
+        }
+
+        var dotNetDate = s.match(/\/Date\(([-]?\d+)(?:[+-]\d{4})?\)\//);
+        if (dotNetDate) {
+            var ticks = parseInt(dotNetDate[1], 10);
+            if (!isNaN(ticks)) {
+                var utc = new Date(ticks);
+                var uy = utc.getUTCFullYear();
+                var um = String(utc.getUTCMonth() + 1).padStart(2, "0");
+                var ud = String(utc.getUTCDate()).padStart(2, "0");
+                return uy + "-" + um + "-" + ud;
+            }
+        }
+
+        var tIndex = s.indexOf("T");
+        if (tIndex > 0) {
+            return s.slice(0, tIndex);
+        }
+
+        var spaceIndex = s.indexOf(" ");
+        if (spaceIndex > 0) {
+            return s.slice(0, spaceIndex);
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            return s;
+        }
+
+        var dt = new Date(s);
         if (isNaN(dt.getTime())) {
             return "";
         }
 
-        return dt.toISOString().slice(0, 10);
+        var y = dt.getFullYear();
+        var m = String(dt.getMonth() + 1).padStart(2, "0");
+        var d = String(dt.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
     }
 
     function recalcRow(tr) {
@@ -100,8 +267,10 @@
 
     function appendRow(item) {
         var tr = document.createElement("tr");
+        var inventorySelect = "<select class='inventory'>" + buildInventoryOptionsHtml(item.InventoryID) + "</select>";
+
         tr.innerHTML = ""
-            + "<td><input class='inventory' value='" + (item.InventoryID || "") + "'></td>"
+            + "<td>" + inventorySelect + "</td>"
             + "<td><input class='number' type='number' min='0' step='1' value='" + toNumber(item.Number).toFixed(0) + "'></td>"
             + "<td><input class='volume' type='number' min='0' step='0.01' value='" + toNumber(item.Volume).toFixed(2) + "'></td>"
             + "<td><input class='price' type='number' min='0' step='0.01' value='" + toNumber(item.Price).toFixed(2) + "'></td>"
@@ -120,7 +289,7 @@
         return {
             CpnyID: id("branchID").value.trim(),
             BatchID: id("batchID").value.trim(),
-            OrderDay: orderDay ? orderDay + "T00:00:00" : null,
+            OrderDay: orderDay || null,
             TotalNumer: toNumber(id("totalNumber").value),
             TotalVolume: toNumber(id("totalVolume").value),
             TotalAmount: toNumber(id("totalAmount").value)
@@ -190,6 +359,11 @@
             return;
         }
 
+        if (!batch) {
+            status("Vui lòng chọn hoặc nhập BatchID trước khi load.", true);
+            return;
+        }
+
         status("Đang load dữ liệu...", false);
 
         Promise.all([
@@ -199,6 +373,8 @@
             var header = (res[0].data || [])[0];
             var details = res[1].data || [];
             deleted = [];
+
+            id("orderDay").value = "";
 
             id("detailBody").innerHTML = "";
             details.forEach(appendRow);
@@ -214,10 +390,12 @@
                         id("orderDay").value = orderDayValue;
                     }
                 }
+                status("Load thành công.", false);
+            } else {
+                status("Không tìm thấy BatchID trong dữ liệu DB.", true);
             }
 
             recalcTotal();
-            status("Load thành công.", false);
         }).catch(function (err) {
             status("Load thất bại: " + err.message, true);
         });
@@ -227,6 +405,11 @@
         var header = getHeaderFromForm();
         if (!header.CpnyID) {
             status("BranchID không được để trống.", true);
+            return;
+        }
+
+        if (isOrderDayBeforeToday(header.OrderDay)) {
+            status("OrderDay không được nhỏ hơn ngày hiện tại (giờ VN).", true);
             return;
         }
 
@@ -255,7 +438,11 @@
             }
 
             if (res.batchNbr) {
-                id("batchID").value = res.batchNbr;
+                ensureBatchOption(res.batchNbr, res.savedOrderDay || header.OrderDay || "");
+            }
+
+            if (res.savedOrderDay) {
+                id("orderDay").value = res.savedOrderDay;
             }
 
             deleted = [];
@@ -307,7 +494,28 @@
     };
 
     window.addEventListener("DOMContentLoaded", function () {
+        applyOrderDayMinConstraint();
         setTodayIfEmpty();
+
+        loadComboData();
+
+        var branchEl = id("branchID");
+        if (branchEl) {
+            branchEl.addEventListener("change", function () {
+                populateBatchSelect(branchEl.value);
+            });
+        }
+
+        var orderDayEl = id("orderDay");
+        if (orderDayEl) {
+            orderDayEl.addEventListener("change", function () {
+                if (isOrderDayBeforeToday(orderDayEl.value)) {
+                    orderDayEl.value = getVietnamTodayDateValue();
+                    status("Không được chọn ngày trước ngày hiện tại (giờ VN).", true);
+                }
+            });
+        }
+
         appendRow({});
     });
 })();

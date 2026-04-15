@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewBag.Title</title>
-    <script src="@Url.Content("~/scripts/screen/FS10901.js")"></script>
+    <script src="@Url.Content("~/scripts/screen/FS10901.js?v=" + DateTime.Now.Ticks)"></script>
 </head>
 <body>
     @{ Html.RenderAction("Body", new { lang = (Session["LangID"] ?? 0) }); }

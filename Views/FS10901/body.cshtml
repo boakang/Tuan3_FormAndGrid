@@ -91,6 +91,18 @@
         padding: 6px;
     }
 
+    input, select {
+        font-family: inherit;
+    }
+
+    select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+
     .hint {
         color: #6b7280;
         font-size: 12px;
@@ -115,11 +127,13 @@
         <div class="row">
             <div>
                 <label>BranchID (CpnyID)</label>
-                <input id="branchID" value="HQSOFT" />
+                <select id="branchID"></select>
             </div>
             <div>
                 <label>BatchID</label>
-                <input id="batchID" placeholder="Để trống để tự sinh" />
+                <select id="batchID">
+                    <option value="">Để trống để tự sinh</option>
+                </select>
             </div>
             <div>
                 <label>OrderDay</label>

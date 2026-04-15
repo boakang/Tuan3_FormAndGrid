@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web.Mvc;
 using Newtonsoft.Json;
@@ -49,7 +50,7 @@ namespace HQSoft.Controllers
                 {
                     x.BatchID,
                     x.CpnyID,
-                    OrderDay = x.OrderDay.HasValue ? x.OrderDay.Value.ToString("yyyy-MM-ddTHH:mm:ss") : null,
+                    OrderDay = x.OrderDay.HasValue ? x.OrderDay.Value.ToString("yyyy-MM-dd") : null,
                     x.TotalNumer,
                     x.TotalVolume,
                     x.TotalAmount
@@ -99,6 +100,22 @@ namespace HQSoft.Controllers
                     return Json(new { success = false, message = "CpnyID is required" }, JsonRequestBehavior.AllowGet);
                 }
 
+                if (curHeader.OrderDay.HasValue)
+                {
+                    var vnToday = DateTime.UtcNow.AddHours(7).Date;
+                    if (curHeader.OrderDay.Value.Date < vnToday)
+                    {
+                        return Json(
+                            new
+                            {
+                                success = false,
+                                message = "OrderDay cannot be earlier than today (Vietnam time)."
+                            },
+                            JsonRequestBehavior.AllowGet
+                        );
+                    }
+                }
+
                 var duplicatedInventory = curDetails
                     .GroupBy(p => p.InventoryID, StringComparer.OrdinalIgnoreCase)
                     .Where(g => g.Count() > 1)
@@ -112,6 +129,24 @@ namespace HQSoft.Controllers
                         {
                             success = false,
                             message = "InventoryID duplicated in detail rows: " + duplicatedInventory
+                        },
+                        JsonRequestBehavior.AllowGet
+                    );
+                }
+
+                var invalidInventoryIds = curDetails
+                    .Select(p => p.InventoryID)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Where(inv => !IsValidInventory(inv))
+                    .ToList();
+
+                if (invalidInventoryIds.Count > 0)
+                {
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = "InventoryID not found or inactive in IN_Inventory: " + string.Join(", ", invalidInventoryIds)
                         },
                         JsonRequestBehavior.AllowGet
                     );
@@ -176,7 +211,26 @@ namespace HQSoft.Controllers
                 }
 
                 _db.SaveChanges();
-                return Json(new { success = true, batchNbr = batchNbr }, JsonRequestBehavior.AllowGet);
+
+                var savedBatch = _db.FS_Batch_Huy
+                    .Where(p => p.CpnyID.ToLower() == branchID.ToLower() && p.BatchID.ToLower() == batchNbr.ToLower())
+                    .Select(p => new
+                    {
+                        OrderDay = p.OrderDay
+                    })
+                    .FirstOrDefault();
+
+                return Json(
+                    new
+                    {
+                        success = true,
+                        batchNbr = batchNbr,
+                        savedOrderDay = savedBatch != null && savedBatch.OrderDay.HasValue
+                            ? savedBatch.OrderDay.Value.ToString("yyyy-MM-dd")
+                            : null
+                    },
+                    JsonRequestBehavior.AllowGet
+                );
             }
             catch (Exception ex)
             {
@@ -240,12 +294,118 @@ namespace HQSoft.Controllers
             return "IN" + (n + 1).ToString("000000");
         }
 
+        public ActionResult GetCpnyList()
+        {
+            try
+            {
+                var data = _db.Database.SqlQuery<CpnyListResult>(
+                    @"SELECT c.CpnyID, c.CpnyName 
+                      FROM dbo.SYS_Company c WITH (NOLOCK) 
+                      WHERE c.Status = 'AC' 
+                      ORDER BY c.CpnyID"
+                ).ToList();
+
+                return Json(new { data = data }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        public ActionResult GetBatchList(string branchID)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(branchID))
+                {
+                    return Json(new { data = new List<dynamic>() }, JsonRequestBehavior.AllowGet);
+                }
+
+                var data = _db.FS_Batch_Huy
+                    .Where(p => p.CpnyID.ToLower() == branchID.ToLower())
+                    .Select(p => new
+                    {
+                        BatchID = p.BatchID,
+                        OrderDay = p.OrderDay.HasValue ? p.OrderDay.Value.ToString("yyyy-MM-dd") : ""
+                    })
+                    .ToList();
+
+                return Json(new { data = data }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        public ActionResult GetInventoryList()
+        {
+            try
+            {
+                var data = _db.Database.SqlQuery<InventoryListResult>(
+                    @"SELECT InvtID as InventoryID, Descr as InventoryName 
+                      FROM dbo.IN_Inventory WITH(NOLOCK) 
+                      WHERE Status = 'AC' 
+                      ORDER BY InvtID"
+                ).ToList();
+
+                return Json(new { data = data, count = data.Count }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        public ActionResult GetInventoryListDebug()
+        {
+            try
+            {
+                var allData = _db.Database.SqlQuery<dynamic>(
+                    @"SELECT TOP 50 InvtID, Descr, Status FROM dbo.IN_Inventory WITH(NOLOCK)"
+                ).ToList();
+
+                var activeData = _db.Database.SqlQuery<dynamic>(
+                    @"SELECT InvtID, Descr, Status FROM dbo.IN_Inventory WITH(NOLOCK) WHERE Status = 'AC'"
+                ).ToList();
+
+                return Json(new { allCount = allData.Count, activeCount = activeData.Count, allData = allData, activeData = activeData }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        private bool IsValidInventory(string inventoryID)
+        {
+            if (string.IsNullOrWhiteSpace(inventoryID))
+            {
+                return false;
+            }
+
+            var inv = inventoryID.Trim();
+            var sql = @"
+SELECT COUNT(1)
+FROM dbo.IN_Inventory WITH(NOLOCK)
+WHERE UPPER(InvtID) = UPPER(@InventoryID)
+  AND Status = 'AC'";
+
+            var count = _db.Database.SqlQuery<int>(
+                sql,
+                new SqlParameter("@InventoryID", inv)
+            ).FirstOrDefault();
+
+            return count > 0;
+        }
+
         private void Update_Batch(FS_Batch_Huy t, FS10901_pgBatch_Huy_Result s, bool isNew)
         {
             var vnNow = DateTime.UtcNow.AddHours(7);
             var userName = string.IsNullOrWhiteSpace(Current.UserName) ? "SYSTEM" : Current.UserName;
 
-            t.OrderDay = s.OrderDay ?? vnNow;
+            t.OrderDay = (s.OrderDay ?? vnNow).Date;
             t.TotalNumer = s.TotalNumer;
             t.TotalVolume = s.TotalVolume;
             t.TotalAmount = s.TotalAmount;
@@ -291,5 +451,17 @@ namespace HQSoft.Controllers
         public string CpnyID { get; set; }
         public string UserName { get; set; }
         public short LangID { get; set; }
+    }
+
+    public class CpnyListResult
+    {
+        public string CpnyID { get; set; }
+        public string CpnyName { get; set; }
+    }
+
+    public class InventoryListResult
+    {
+        public string InventoryID { get; set; }
+        public string InventoryName { get; set; }
     }
 }
