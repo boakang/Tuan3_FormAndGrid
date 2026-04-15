@@ -10,6 +10,7 @@ Project demo ASP.NET MVC (.NET Framework) cho màn hình quản lý lô hàng FS
 
 ## 2) Cấu trúc thư mục
 
+```text
 FormAndGrid/
 |-- HQSoft.sln                                   // Solution Visual Studio
 |-- HQSoft.csproj                                // Cấu hình project, package và danh sách file compile/content
@@ -26,13 +27,13 @@ FormAndGrid/
 |-- mo ta sys_company.pdf                        // Tài liệu bảng SYS_Company
 |
 |-- App_Start/
-|   |-- RouteConfig.cs                           // Định nghĩa route, default vào FS10901
+|   `-- RouteConfig.cs                           // Định nghĩa route, default vào FS10901
 |
 |-- Controllers/
-|   |-- FS10901Controller.cs                     // API/logic: Load Header-Detail, Save, Delete
+|   `-- FS10901Controller.cs                     // API/logic: Load Header-Detail, Save, Delete
 |
 |-- Models/
-|   |-- DemoEdmxPlaceholders.cs                  // DbContext + entity mapping + gọi stored procedure
+|   `-- DemoEdmxPlaceholders.cs                  // DbContext + entity mapping + gọi stored procedure
 |
 |-- Views/
 |   |-- Web.config                               // Cấu hình Razor cho Views
@@ -54,6 +55,7 @@ FormAndGrid/
 |-- obj/                                         // File trung gian build (không phải source)
 |-- bin_test*/                                   // Output test tạm (không phải source)
 `-- bin_deploy_*/                                // Output deploy tạm (không phải source)
+```
 
 ## 3) Database đang dùng trong flow demo
 - Bảng: `FS_Batch_Huy`, `FS_BatchDetail_Huy`.
