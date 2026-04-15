@@ -39,39 +39,36 @@ IIS features được script setup bật:
 
 ```text
 FormAndGrid/
-|-- HQSoft.sln
-|-- HQSoft.csproj
-|-- Web.config
-|-- Global.asax
-|-- Global.asax.cs
-|-- README.md
-|-- SETUP_GUIDE.md
-|-- .gitignore
-|-- packages.config
-|-- note.txt
+|-- HQSoft.sln                         // Solution để mở/build toàn bộ project
+|-- HQSoft.csproj                      // Cấu hình project, package, target framework
+|-- Web.config                         // Connection string và cấu hình web/EF
+|-- Global.asax                        // Khai báo entry ASP.NET application
+|-- Global.asax.cs                     // Application_Start, đăng ký route
+|-- README.md                          // Tài liệu tổng quan dự án
+|-- SETUP_GUIDE.md                     // Tài liệu setup chi tiết (nếu dùng)
+|-- packages.config                    // Danh sách package kiểu cũ để tương thích
+|-- note.txt                           // Ghi chú nghiệp vụ và SQL tham khảo
 |-- App_Start/
-|   `-- RouteConfig.cs
+|   `-- RouteConfig.cs                 // Cấu hình URL route cho MVC
 |-- Controllers/
-|   `-- FS10901Controller.cs
+|   `-- FS10901Controller.cs           // API load/save/delete và validate backend
 |-- Models/
-|   `-- DemoEdmxPlaceholders.cs
+|   `-- DemoEdmxPlaceholders.cs        // DbContext EF6, entity mapping, gọi stored procedure
 |-- Views/
-|   |-- Web.config
-|   |-- _ViewStart.cshtml
 |   `-- FS10901/
-|       |-- index.cshtml
-|       `-- body.cshtml
+|       |-- index.cshtml               // Trang entry load script và render body
+|       `-- body.cshtml                // HTML giao diện form + grid
 |-- scripts/
-|   |-- setup-local-iis.ps1
-|   |-- smoke-test-local.ps1
+|   |-- setup-local-iis.ps1            // Setup Local IIS và deploy DLL vào bin
+|   |-- smoke-test-local.ps1           // Test nhanh luồng Save/Delete qua HTTP
 |   `-- screen/
-|       `-- FS10901.js
+|       `-- FS10901.js                 // Logic frontend: load combo, load data, save, delete, tính tổng
 |-- Properties/
-|   `-- AssemblyInfo.cs
-|-- bin/
-|-- obj/
-|-- bin_test*/
-`-- bin_deploy_*/
+|   `-- AssemblyInfo.cs                // Metadata assembly .NET Framework
+|-- bin/                               // Output runtime/build chính
+|-- obj/                               // Output trung gian khi build
+|-- bin_test*/                         // Output test tạm
+`-- bin_deploy_*/                      // Output deploy tạm từ script
 ```
 
 ## 4) Route và màn hình
