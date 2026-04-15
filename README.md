@@ -89,3 +89,6 @@ FormAndGrid/
    - `http://localhost:8090/FS10901`
 4. (Tùy chọn) smoke test:
    - `powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test-local.ps1`
+  
+5. Giao diện demo
+![Giao diện](https://github.com/boakang/Tuan3_FormAndGrid/blob/main/img/Screenshot%202026-04-15%20095014.png)
