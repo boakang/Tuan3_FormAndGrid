@@ -81,7 +81,42 @@ FormAndGrid/
 - Stored procedure: `FS10901_pgBatch_Huy`, `FS10901_pgBatchDetail_Huy`.
 - Bảng tham chiếu gián tiếp qua SP: `IN_Inventory`.
 
-## 4) Chạy nhanh
+## 4) Chức năng demo trên màn hình FS10901
+1. Load dữ liệu theo BranchID + BatchID.
+2. Tạo mới lô khi để trống BatchID, hệ thống tự sinh mã lô.
+3. Thêm/sửa/xóa dòng detail theo InventoryID.
+4. Lưu dữ liệu header và detail xuống database.
+5. Xóa toàn bộ lô (xóa detail trước, xóa header sau).
+6. Validate khi lưu:
+    - BranchID bắt buộc.
+    - Mỗi InventoryID chỉ xuất hiện một lần trong cùng batch.
+
+## 5) Cách tính Amount và TotalAmount
+- Công thức Amount của từng dòng detail:
+
+   Amount = (Number x Volume x Price) + (Number x Volume x Price x Tax / 100)
+
+- Trong mã frontend, công thức được tính tại [scripts/screen/FS10901.js](scripts/screen/FS10901.js) trong hàm recalcRow.
+- TotalAmount ở header là tổng tất cả Amount của các dòng detail, được cộng tại hàm recalcTotal trong [scripts/screen/FS10901.js](scripts/screen/FS10901.js).
+- Tương tự:
+   - TotalNumber = tổng Number của các dòng detail.
+   - TotalVolume = tổng Volume của các dòng detail.
+
+## 6) Stored procedure dùng để làm gì
+- FS10901_pgBatch_Huy:
+   - Mục đích: lấy dữ liệu header của lô theo BranchID + BatchID.
+   - Được gọi từ action GetFS_Batch_Huy trong [Controllers/FS10901Controller.cs](Controllers/FS10901Controller.cs).
+
+- FS10901_pgBatchDetail_Huy:
+   - Mục đích: lấy danh sách detail của lô theo BranchID + BatchID.
+   - Có join bảng IN_Inventory để trả thêm InventoryName.
+   - Được gọi từ action GetFS_BatchDetail_Huy trong [Controllers/FS10901Controller.cs](Controllers/FS10901Controller.cs).
+
+- Lưu ý:
+   - Save và Delete trong demo hiện tại không gọi stored procedure ghi dữ liệu.
+   - Hai action Save/DeleteData thao tác trực tiếp bảng FS_Batch_Huy và FS_BatchDetail_Huy trong [Controllers/FS10901Controller.cs](Controllers/FS10901Controller.cs).
+
+## 7) Chạy nhanh
 1. Mở PowerShell (Run as Administrator) tại thư mục project.
 2. Chạy setup local IIS:
    - `powershell -ExecutionPolicy Bypass -File .\scripts\setup-local-iis.ps1`
