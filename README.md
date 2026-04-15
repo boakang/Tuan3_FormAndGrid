@@ -174,3 +174,6 @@ POST:
 
 - Timestamp khi lưu (`Crtd_DateTime`, `LUpd_DateTime`) đang dùng giờ Việt Nam (UTC+07:00).
 - Nếu đổi database/server, cập nhật connection string `Product_eSales_2026Entities` trong `Web.config`.
+
+## 12) Giao diện
+![giao diện](https://github.com/boakang/Tuan3_FormAndGrid/blob/main/img/Screenshot%202026-04-15%20154953.png)
