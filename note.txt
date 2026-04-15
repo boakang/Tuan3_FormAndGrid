@@ -1,0 +1,151 @@
+-- table ---
+FS_Batch_Huy: co bang, khong co du lieu
+Lưu thông tin số lô nghiệp vụ
+Có các field:
+BatchID, CpnyID
+TotalNumer, TotalVolume, TotalAmount
+OrderDay
+7 field hệ thống
+
+FS_BatchDetail_Huy: co bang, ko co du lieu
+Lưu danh sách sản phẩm trong lô
+Có:
+InventoryID
+Number, Volume, Price, Tax, Amount
+
+FS_ItemSite_Huy: co bang, ko co du lieu
+Lưu tồn kho
+Có:
+InvtID, CpnyID, QtyAvail
+
+IN_Inventory: co bang, co du lieu
+
+dbo.SYS_Company -- co bang, khong co du lieu ---
+
+---- procedure ---
+USE [Product_eSales_2026]
+GO
+/****** Object:  StoredProcedure [dbo].[FS10901_pgBatch_Huy]    Script Date: 4/14/2026 3:58:52 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[FS10901_pgBatch_Huy] -- FS10901_pgBatch_Huy '','',1,'IN000001','HQSOFT'
+	@CpnyID VARCHAR(30),
+	@UserName VARCHAR(30),
+	@LangID SMALLINT=0,
+	@BatchID VARCHAR(30),
+	@BranchID VARCHAR(30)
+AS
+	SELECT b.BatchID,b.CpnyID, b.OrderDay,b.TotalNumer,b.TotalAmount,b.TotalVolume,b.tstamp
+	FROM dbo.FS_Batch_Huy b WITH(NOLOCK) --- co bang -- khong co du lieu ---
+	WHERE 	@BatchID = b.BatchID AND b.CpnyID = @BranchID
+
+
+USE [Product_eSales_2026]
+GO
+/****** Object:  StoredProcedure [dbo].[FS10901_pgBatchDetail_Huy]    Script Date: 4/14/2026 3:59:32 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[FS10901_pgBatchDetail_Huy] -- FS10901_pgBatchDetail_Huy '','',1
+	@CpnyID VARCHAR(30),
+	@UserName VARCHAR(30),
+	@LangID SMALLINT=0,
+	@BatchID VARCHAR(30),
+	@BranchID VARCHAR(30)
+AS
+	SELECT InventoryID = i.InvtID, InventoryName = i.Descr, d.Number,d.Tax, TaxPrice = d.Volume * d.Number * d.Tax * d.Price / 100, d.Volume, d.BatchID,d.CpnyID, d.Price
+	,d.Amount,d.tstamp
+	FROM dbo.FS_BatchDetail_Huy d WITH(NOLOCK) -- bang nay khong co du lieu
+	INNER JOIN dbo.IN_Inventory i WITH(NOLOCK) ON i.InvtID=d.InventoryID --- bang nay co du lieu
+	WHERE i.Status = 'AC'
+	AND @BatchID = d.BatchID AND d.CpnyID = @BranchID
+
+
+
+USE [Product_eSales_2026]
+GO
+
+IF EXISTS (
+    SELECT TOP 1 1
+    FROM dbo.sysobjects
+    WHERE id = OBJECT_ID(N'[dbo].[FS10901_pcCpnyID]')
+      AND OBJECTPROPERTY(id, N'IsProcedure') = 1
+)
+    DROP PROCEDURE [dbo].[FS10901_pcCpnyID]
+GO
+
+CREATE PROCEDURE [dbo].[FS10901_pcCpnyID]
+    @CpnyID VARCHAR(30),
+    @UserName VARCHAR(30),
+    @LangID SMALLINT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.CpnyID,
+        c.CpnyName
+    FROM dbo.SYS_Company c WITH (NOLOCK) -- co bang, khong co du lieu ---
+    WHERE c.Status = 'AC'
+END
+GO
+
+
+IF EXISTS (
+    SELECT TOP 1 1
+    FROM dbo.sysobjects
+    WHERE id = OBJECT_ID(N'[dbo].[FS10901_pcBatchID]')
+      AND OBJECTPROPERTY(id, N'IsProcedure') = 1
+)
+    DROP PROCEDURE [dbo].[FS10901_pcBatchID]
+GO
+
+CREATE PROCEDURE [dbo].[FS10901_pcBatchID]
+    @CpnyID VARCHAR(30),
+    @UserName VARCHAR(30),
+    @LangID SMALLINT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        B.BatchID,
+        B.CpnyID,
+        B.OrderDay,
+        B.TotalNumer,
+        B.TotalAmount,
+        B.TotalVolume
+    FROM dbo.FS_Batch_Huy B WITH (NOLOCK) -- co bang, khong co du lieu ---
+END
+GO
+
+
+IF EXISTS (
+    SELECT TOP 1 1
+    FROM dbo.sysobjects
+    WHERE id = OBJECT_ID(N'[dbo].[FS10901_pcInventoryID]')
+      AND OBJECTPROPERTY(id, N'IsProcedure') = 1
+)
+    DROP PROCEDURE [dbo].[FS10901_pcInventoryID]
+GO
+
+CREATE PROCEDURE [dbo].[FS10901_pcInventoryID]
+    @CpnyID VARCHAR(30),
+    @UserName VARCHAR(30),
+    @LangID SMALLINT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        InventoryID = i.InvtID,
+        InventoryName = i.Descr
+    FROM dbo.IN_Inventory i WITH (NOLOCK) -- co bang, co du lieu ---
+    WHERE i.Status = 'AC'
+END
+GO

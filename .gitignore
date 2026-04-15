@@ -1,0 +1,34 @@
+# Build output
+bin/
+obj/
+
+# Temporary build folders created during local deploy/tests
+bin_test/
+bin_test_*/
+bin_deploy_*/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio cache and generated folders
+.vs/
+TestResults/
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs and diagnostics
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IIS Express / local web server generated
+*.ide

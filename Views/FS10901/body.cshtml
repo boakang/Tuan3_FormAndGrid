@@ -1,0 +1,167 @@
+﻿@{
+    Layout = null;
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: Segoe UI, Arial, sans-serif;
+        background: #f5f7fb;
+        color: #1f2937;
+    }
+
+    .wrap {
+        max-width: 1200px;
+        margin: 24px auto;
+        padding: 0 16px;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(120px, 1fr));
+        gap: 12px;
+    }
+
+    label {
+        font-size: 12px;
+        color: #6b7280;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+    }
+
+    button {
+        border: 0;
+        padding: 9px 14px;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    button.secondary {
+        background: #4b5563;
+    }
+
+    button.danger {
+        background: #dc2626;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    th {
+        background: #f9fafb;
+        font-weight: 600;
+    }
+
+    td input {
+        font-size: 13px;
+        padding: 6px;
+    }
+
+    .hint {
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 8px;
+    }
+
+    .status {
+        margin-top: 10px;
+        font-size: 13px;
+    }
+
+    @@media (max-width: 900px) {
+        .row {
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
+    }
+</style>
+
+<div class="wrap">
+    <div class="card">
+        <h2 style="margin-top:0">FS10901 - Batch Demo</h2>
+        <div class="row">
+            <div>
+                <label>BranchID (CpnyID)</label>
+                <input id="branchID" value="HQSOFT" />
+            </div>
+            <div>
+                <label>BatchID</label>
+                <input id="batchID" placeholder="Để trống để tự sinh" />
+            </div>
+            <div>
+                <label>OrderDay</label>
+                <input id="orderDay" type="date" />
+            </div>
+            <div>
+                <label>TotalNumber</label>
+                <input id="totalNumber" readonly />
+            </div>
+            <div>
+                <label>TotalVolume</label>
+                <input id="totalVolume" readonly />
+            </div>
+            <div>
+                <label>TotalAmount</label>
+                <input id="totalAmount" readonly />
+            </div>
+        </div>
+        <div class="toolbar">
+            <button onclick="fs10901.loadData()">Load</button>
+            <button class="secondary" onclick="fs10901.addRow()">Add Row</button>
+            <button onclick="fs10901.save()">Save</button>
+            <button class="danger" onclick="fs10901.deleteBatch()">Delete Batch</button>
+        </div>
+        <div class="hint">Bạn có thể để trống BatchID rồi bấm Save để hệ thống tự sinh mã lô.</div>
+        <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+        <table id="detailTable">
+            <thead>
+                <tr>
+                    <th>InventoryID</th>
+                    <th>Number</th>
+                    <th>Volume</th>
+                    <th>Price</th>
+                    <th>Tax (%)</th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="detailBody"></tbody>
+        </table>
+    </div>
+</div>
